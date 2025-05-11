@@ -44,11 +44,10 @@ while True:
         event, values = window.read()
     except Exception as e:
         sg.popup_error(f"GUI Error: {e}")
-    continue
+        continue  # This continue should only be inside the except block
 
     if event in (sg.WIN_CLOSED, "Exit"):
         break
-
 
     if event == "Search":
         query_text = values["-SEARCH-"].strip()
@@ -56,31 +55,28 @@ while True:
             sg.popup("Please enter a search query.")
             continue
 
-    # Step 1: Parse the query for keywords (dates, actions, topics)
-    sg.popup("Parsing query...")
-    keywords = extract_keywords(query_text)
+        # Step 1: Parse the query for keywords (dates, actions, topics)
+        sg.popup("Parsing query...")
+        keywords = extract_keywords(query_text)
 
-    # Display parsed keywords
-    date_text = ", ".join(keywords["dates"]) if keywords["dates"] else "No date found."
-    action_text = ", ".join(keywords["actions"]) if keywords["actions"] else "No actions found."
-    topic_text = ", ".join(keywords["topics"]) if keywords["topics"] else "No topics found."
+        # Display parsed keywords
+        date_text = ", ".join(keywords["dates"]) if keywords["dates"] else "No date found."
+        action_text = ", ".join(keywords["actions"]) if keywords["actions"] else "No actions found."
+        topic_text = ", ".join(keywords["topics"]) if keywords["topics"] else "No topics found."
 
-    result_text = f"Dates: {date_text}\nActions: {action_text}\nTopics: {topic_text}"
+        result_text = f"Dates: {date_text}\nActions: {action_text}\nTopics: {topic_text}"
+        window["-RESULTS-"].update(result_text)
 
-    # Update the result panel with parsed query information
-    window["-RESULTS-"].update(result_text)
-
-    # Step 2: Perform FAISS search
-    sg.popup("Searching…")
-    results = query_faiss(query_text, k=5)
-    if not results:
-        window["-RESULTS-"].update("No matching meetings found.")
-    else:
-        context = "\n".join([r['content'] for r in results[:3]])  
-        sg.popup("Generating answer...")
-        answer = generate_answer_with_llm(query_text, context)
-        window["-RESULTS-"].update(answer)
-
+        # Step 2: Perform FAISS search
+        sg.popup("Searching…")
+        results = query_faiss(query_text, k=5)
+        if not results:
+            window["-RESULTS-"].update("No matching meetings found.")
+        else:
+            context = "\n".join([r['content'] for r in results[:3]])  
+            sg.popup("Generating answer...")
+            answer = generate_answer_with_llm(query_text, context)
+            window["-RESULTS-"].update(answer)
 
     if event == "Process":
         try:
@@ -89,40 +85,36 @@ while True:
                 sg.popup("Please select a file first.")
                 continue
 
-        # Compute storage paths
-        from datetime import date
-        from pathlib   import Path
-        today = date.today()
-        slug  = Path(raw_path).stem
-        base  = Path("meetings")/f"{today.year}"/f"{today:%m}"/f"{today:%d}-{slug}"
-        raw_dst = base/Path(raw_path).name
-        txt     = base/"transcript.txt"
-        summ    = base/"summary.txt"
-        os.makedirs(base, exist_ok=True)
+            from datetime import date
+            from pathlib import Path
+            today = date.today()
+            slug = Path(raw_path).stem
+            base = Path("meetings")/f"{today.year}"/f"{today:%m}"/f"{today:%d}-{slug}"
+            raw_dst = base/Path(raw_path).name
+            txt = base/"transcript.txt"
+            summ = base/"summary.txt"
+            os.makedirs(base, exist_ok=True)
 
-        # Copy raw file
-        sg.popup("Copying file…")
-        subprocess.run(["cp", raw_path, str(raw_dst)])
+            sg.popup("Copying file…")
+            subprocess.run(["cp", raw_path, str(raw_dst)])
 
-        # Transcribe
-        sg.popup("Transcribing…")
-        transcribe(str(raw_dst), str(txt))
+            sg.popup("Transcribing…")
+            transcribe(str(raw_dst), str(txt))
 
-        # Summarize
-        sg.popup("Summarizing…")
-        summarize(str(txt), str(summ))
+            sg.popup("Summarizing…")
+            summarize(str(txt), str(summ))
 
-        # 🧠 Build FAISS index after summarization
-        sg.popup("Updating search index…")
-        build_faiss_index()
+            sg.popup("Updating search index…")
+            build_faiss_index()
 
-        sg.popup(f"Done!\nTranscript: {txt}\nSummary: {summ}")
+            sg.popup(f"Done!\nTranscript: {txt}\nSummary: {summ}")
         except Exception as e:
             sg.popup_error(f"[ERROR] Processing failed: {e}")
 
     if event == "Refresh All Indexes":
         sg.popup("Refreshing all FAISS indexes…")
-        build_faiss_index()  
+        build_faiss_index()
         sg.popup("All indexes have been refreshed.")
 
 window.close()
+
